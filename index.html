@@ -8,8 +8,7 @@
 body{font-family:Arial;background:linear-gradient(135deg,#eaf2ff,#f8fbff);padding:30px;color:#123}
 .box{max-width:950px;margin:auto;background:#fff;padding:25px;border-radius:20px;box-shadow:0 15px 35px rgba(0,64,160,.15)}
 .brand{text-align:center;margin-bottom:18px}
-.brand img {max-width: 200px; height: auto; display: block; margin: 0 auto 10px auto;}
-.brand img { display: none; } 
+.brand img {max-width: 200px; height: auto; display: block; margin: 0 auto 10px auto; display: none;} 
 .sub{color:#0b4fb3;font-weight:bold;margin-top:6px;font-size: 1.2em;}
 .input-row { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; margin-bottom: 15px; gap: 10px; }
 .or-text { font-weight: bold; color: #0b4fb3; font-size: 1.1em; }
@@ -50,65 +49,68 @@ th{background:#0b4fb3;color:#fff}
 </div>
 
 <table>
-<tr><th>إجمالي الراتب</th><th>البدلات المعتمدة</th><th>الأجر التأميني</th><th>قيمة التأمينات 11%</th><th>الإعفاء الشخصي</th><th>الضريبة الشهرية</th><th>الصافي الشهري</th></tr>
+<tr><th>إجمالي الراتب</th><th>البدلات المعتمدة</th><th>الأجر التأميني</th><th>تأمينات 11%</th><th>الإعفاء الشخصي</th><th>الضريبة الشهرية</th><th>الصافي الشهري</th></tr>
 <tr><td id="outSalary">-</td><td id="outAllow">-</td><td id="outInsBase">-</td><td id="outInsVal">-</td><td id="outEx">-</td><td id="outMonth">-</td><td id="outNet">-</td></tr>
 </table>
-
 <p id="details"></p>
-
 <div class="footer">من تنفيذ إستشاري شئون العاملين والمرتبات / لبيب ميشيل<br><a href="https://linktr.ee/labeebmeshel" target="_blank" rel="noopener noreferrer">تواصل معي</a></div>
 </div>
 
 <script>
 function tax(i){if(i<=40000)return 0; if(i<=55000)return (i-40000)*0.10; if(i<=70000)return (i-55000)*0.15+1500; if(i<=200000)return (i-70000)*0.20+3750; if(i<=400000)return (i-200000)*0.225+29750; if(i<=600000)return (i-400000)*0.25+74750; if(i<=1200000){let extra=0; if(i>=900001)extra=15250; else if(i>=800001)extra=10250; else if(i>=700001)extra=6750; else if(i>=600001)extra=4000; return (i-400000)*0.25+74750+extra;} return ((i-1200000)*0.275)+300000;}
 
-function calcValues(salary){
-    const rawAllow = Number(document.getElementById('allowances').value || 0);
-    
-    // المنطق الجديد بناءً على مثالك:
-    // إذا كان هناك بدلات، يتم استنتاج الأجر التأميني بقسمة الإجمالي على 1.30
-    let calculatedInsBase = rawAllow > 0 ? (salary / 1.30) : salary;
-    
-    // تطبيق الحدود الدنيا والقصوى للأجر التأميني (حسب سنة 2026)
-    if(calculatedInsBase < 2700) calculatedInsBase = 2700;
-    if(calculatedInsBase > 16700) calculatedInsBase = 16700;
+function calcValues(totalSalary){
+    const inputAllow = Number(document.getElementById('allowances').value || 0);
+    let insBase = totalSalary;
+    let finalAllow = 0;
 
-    // البدلات المعتمدة هي الفرق بين إجمالي الراتب والأجر التأميني
-    // بحد أقصى القيمة المدخلة في خانة البدلات
-    let finalAllow = Math.min(rawAllow, salary - calculatedInsBase);
-    
-    // في حالة كان الراتب صغير جداً، نضمن أن البدلات لا تظهر بالسالب
-    if(finalAllow < 0) finalAllow = 0;
+    if (inputAllow > 0) {
+        // المعادلة بناءً على منطق الـ Excel الخاص بك (Total / 1.30)
+        insBase = totalSalary / 1.30;
+        
+        // تطبيق الحدود الدنيا والقصوى للأجر التأميني
+        if(insBase < 2700) insBase = 2700;
+        if(insBase > 16700) insBase = 16700;
 
-    const ins = calculatedInsBase * 0.11;
-    const income = (salary - ins) * 12;
+        // البدلات المعتمدة هي الفرق بين الإجمالي والتأميني (بحد أقصى 30% من التأميني)
+        finalAllow = totalSalary - insBase;
+        
+        // التأكد أن البدلات المعتمدة لا تتجاوز القيمة التي أدخلها المستخدم فعلياً
+        if (finalAllow > inputAllow) {
+            finalAllow = inputAllow;
+            insBase = totalSalary - finalAllow;
+        }
+    }
+
+    const insVal = insBase * 0.11;
+    const yearlyIncome = (totalSalary - insVal) * 12;
     const exemption = document.getElementById('specialNeeds').checked ? 30000 : 20000;
-    const taxable = Math.max(0, income - exemption);
-    const yearly = tax(taxable);
-    const monthly = yearly / 12;
-    const net = salary - ins - monthly;
+    const taxable = Math.max(0, yearlyIncome - exemption);
+    const yearlyTax = tax(taxable);
+    const monthlyTax = yearlyTax / 12;
+    const net = totalSalary - insVal - monthlyTax;
 
-    return {calculatedInsBase, finalAllow, ins, income, exemption, taxable, yearly, monthly, net};
+    return {totalSalary, finalAllow, insBase, insVal, exemption, monthlyTax, net};
 }
 
 function calcTax(){
     const salary = Number(document.getElementById('salary').value || 0);
     const r = calcValues(salary);
-    document.getElementById('outSalary').textContent = salary.toFixed(2);
-    document.getElementById('outInsBase').textContent = r.calculatedInsBase.toFixed(2);
-    document.getElementById('outAllow').textContent = r.finalAllow.toFixed(2); 
-    document.getElementById('outInsVal').textContent = r.ins.toFixed(2);
+    document.getElementById('outSalary').textContent = r.totalSalary.toFixed(2);
+    document.getElementById('outAllow').textContent = r.finalAllow.toFixed(2);
+    document.getElementById('outInsBase').textContent = r.insBase.toFixed(2);
+    document.getElementById('outInsVal').textContent = r.insVal.toFixed(2);
     document.getElementById('outEx').textContent = r.exemption;
-    document.getElementById('outMonth').textContent = r.monthly.toFixed(2);
+    document.getElementById('outMonth').textContent = r.monthlyTax.toFixed(2);
     document.getElementById('outNet').textContent = r.net.toFixed(2);
-    document.getElementById('details').textContent = 'تم الحساب بناءً على معادلة (الإجمالي ÷ 1.30)';
+    document.getElementById('details').textContent = 'تم الحساب بدقة وفقاً للأجر التأميني';
 }
 
 function calcGrossFromNet(){
     const target = Number(document.getElementById('netInput').value || 0);
     if(!target) return;
     let low = 0, high = 2000000, mid = 0;
-    for(let i=0; i<50; i++){
+    for(let i=0; i<60; i++){
         mid = (low + high) / 2;
         const r = calcValues(mid);
         if(r.net < target) low = mid;
