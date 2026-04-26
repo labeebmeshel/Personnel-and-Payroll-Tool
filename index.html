@@ -9,7 +9,7 @@ body{font-family:Arial;background:linear-gradient(135deg,#eaf2ff,#f8fbff);paddin
 .box{max-width:950px;margin:auto;background:#fff;padding:25px;border-radius:20px;box-shadow:0 15px 35px rgba(0,64,160,.15)}
 .brand{text-align:center;margin-bottom:18px}
 .brand img {max-width: 200px; height: auto; display: block; margin: 0 auto 10px auto;}
-/* تم إخفاء اللوجو مؤقتاً بناءً على طلبك السابق، لإظهاره امسح السطر التالي */
+/* لإظهار اللوجو امسح السطر التالي */
 .brand img { display: none; } 
 
 .sub{color:#0b4fb3;font-weight:bold;margin-top:6px;font-size: 1.2em;}
@@ -22,7 +22,6 @@ button:hover{background:#083b86}
 .special-label { display: flex; align-items: center; cursor: pointer; color: #123; font-weight: bold; }
 .special-label input { width: auto; margin-left: 8px; }
 
-/* تنسيق الجدول للموبايل */
 table{width:100%;border-collapse:collapse;margin-top:15px; display: block; overflow-x: auto; white-space: nowrap;}
 td,th{border:1px solid #dbe7ff;padding:12px;text-align:center}
 th{background:#0b4fb3;color:#fff}
@@ -54,7 +53,7 @@ th{background:#0b4fb3;color:#fff}
 </div>
 
 <table>
-<tr><th>إجمالي الراتب</th><th>البدلات المعتمدة</th><th>الأجر التأميني</th><th>قيمة التأمينات %</th><th>الإعفاء الشخصي السنوي</th><th>الضريبة الشهرية</th><th>الصافي الشهري</th></tr>
+<tr><th>إجمالي الراتب</th><th>البدلات المعتمدة</th><th>الأجر التأميني</th><th>قيمة التأمينات %</th><th>الإعفاء الشخصي السنوي</th><th>الضريبة الشهرية</th><th>الصافي الشهرى</th></tr>
 <tr><td id="outSalary">-</td><td id="outAllow">-</td><td id="outInsBase">-</td><td id="outInsVal">-</td><td id="outEx">-</td><td id="outMonth">-</td><td id="outNet">-</td></tr>
 </table>
 
@@ -65,9 +64,56 @@ th{background:#0b4fb3;color:#fff}
 
 <script>
 function tax(i){if(i<=40000)return 0; if(i<=55000)return (i-40000)*0.10; if(i<=70000)return (i-55000)*0.15+1500; if(i<=200000)return (i-70000)*0.20+3750; if(i<=400000)return (i-200000)*0.225+29750; if(i<=600000)return (i-400000)*0.25+74750; if(i<=1200000){let extra=0; if(i>=900001)extra=15250; else if(i>=800001)extra=10250; else if(i>=700001)extra=6750; else if(i>=600001)extra=4000; return (i-400000)*0.25+74750+extra;} return ((i-1200000)*0.275)+300000;}
-function calcValues(salary){const rawAllow=Number(document.getElementById('allowances').value||0); let insBase=salary-rawAllow; if(insBase<2700)insBase=2700; if(insBase>16700)insBase=16700; const allow=Math.min(rawAllow,insBase*0.30); const ins=insBase*0.11; const income=(salary-ins)*12; const exemption=document.getElementById('specialNeeds').checked?30000:20000; const taxable=Math.max(0,income-exemption); const yearly=tax(taxable); const monthly=yearly/12; const net=salary-ins-monthly; return {insBase,allow,ins,income,exemption,taxable,yearly,monthly,net};}
-function calcTax(){const salary=Number(document.getElementById('salary').value||0); const r=calcValues(salary); document.getElementById('outSalary').textContent=salary.toFixed(2); document.getElementById('outInsBase').textContent=r.insBase.toFixed(2); document.getElementById('outAllow').textContent=r.allow.toFixed(2); document.getElementById('outInsVal').textContent=r.ins.toFixed(2); document.getElementById('outEx').textContent=r.exemption; document.getElementById('outMonth').textContent=r.monthly.toFixed(2); document.getElementById('outNet').textContent=r.net.toFixed(2); document.getElementById('details').textContent='تم الحساب بنجاح';}
-function calcGrossFromNet(){const target=Number(document.getElementById('netInput').value||0); if(!target)return; let low=0,high=1000000,mid=0; for(let i=0;i<50;i++){mid=(low+high)/2; const r=calcValues(mid); if(r.net<target)low=mid; else high=mid;} document.getElementById('salary').value=mid.toFixed(2); calcTax();}
+
+function calcValues(salary){
+    const rawAllow = Number(document.getElementById('allowances').value || 0);
+    
+    // حساب الأجر التأميني (الراتب - البدلات) مع مراعاة الحدود الدنيا والقصوى
+    let insBase = salary - rawAllow;
+    if(insBase < 2700) insBase = 2700;
+    if(insBase > 16700) insBase = 16700;
+
+    // تطبيق شرطك الجديد: البدلات المعتمدة بحد أقصى 30% من الأجر التأميني
+    const maxAllowedAllow = insBase * 0.30;
+    const finalAllow = Math.min(rawAllow, maxAllowedAllow);
+
+    const ins = insBase * 0.11;
+    const income = (salary - ins) * 12;
+    const exemption = document.getElementById('specialNeeds').checked ? 30000 : 20000;
+    const taxable = Math.max(0, income - exemption);
+    const yearly = tax(taxable);
+    const monthly = yearly / 12;
+    const net = salary - ins - monthly;
+
+    return {insBase, finalAllow, ins, income, exemption, taxable, yearly, monthly, net};
+}
+
+function calcTax(){
+    const salary = Number(document.getElementById('salary').value || 0);
+    const r = calcValues(salary);
+    document.getElementById('outSalary').textContent = salary.toFixed(2);
+    document.getElementById('outInsBase').textContent = r.insBase.toFixed(2);
+    document.getElementById('outAllow').textContent = r.finalAllow.toFixed(2); // يعرض البدلة المعتمدة بعد الخصم
+    document.getElementById('outInsVal').textContent = r.ins.toFixed(2);
+    document.getElementById('outEx').textContent = r.exemption;
+    document.getElementById('outMonth').textContent = r.monthly.toFixed(2);
+    document.getElementById('outNet').textContent = r.net.toFixed(2);
+    document.getElementById('details').textContent = 'تم الحساب بنجاح وفقاً للقواعد الجديدة';
+}
+
+function calcGrossFromNet(){
+    const target = Number(document.getElementById('netInput').value || 0);
+    if(!target) return;
+    let low = 0, high = 1000000, mid = 0;
+    for(let i=0; i<50; i++){
+        mid = (low + high) / 2;
+        const r = calcValues(mid);
+        if(r.net < target) low = mid;
+        else high = mid;
+    }
+    document.getElementById('salary').value = mid.toFixed(2);
+    calcTax();
+}
 </script>
 </body>
 </html>
