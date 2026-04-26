@@ -44,7 +44,7 @@ th{background:#0b4fb3;color:#fff}
 </div>
 
 <table>
-<tr><th>إجمالي المستحق</th><th>البدلات المعتمدة</th><th>الأجر التأميني</th><th>تأمينات 11%</th><th>الإعفاء الشخصي</th><th>الضريبة الشهرية</th><th>الصافي الشهري</th></tr>
+<tr><th>إجمالي المستحق</th><th>البدلات المعفاة</th><th>الأجر التأميني</th><th>تأمينات 11%</th><th>الإعفاء الشخصي</th><th>الضريبة الشهرية</th><th>الصافي الشهري</th></tr>
 <tr><td id="outSalary">-</td><td id="outAllow">-</td><td id="outInsBase">-</td><td id="outInsVal">-</td><td id="outEx">-</td><td id="outMonth">-</td><td id="outNet">-</td></tr>
 </table>
 <p id="details"></p>
@@ -57,29 +57,29 @@ function tax(i){if(i<=40000)return 0; if(i<=55000)return (i-40000)*0.10; if(i<=7
 function calcValues(totalGrossInput){
     const realAllowInput = Number(document.getElementById('allowances').value || 0);
     
-    // 1. حساب "الأجر التأميني الافتراضي" بناءً على معادلة الـ 1.30
+    // 1. حساب "الأجر التأميني الافتراضي" (لو البدلات وصلت للحد الأقصى 30%)
     let theoreticalInsBase = totalGrossInput / 1.30;
-    
-    // 2. حساب "أقصى بدلات معفاة قانوناً" (وهي الـ 30%)
     let maxLegalAllow = totalGrossInput - theoreticalInsBase;
 
     let finalInsBase = 0;
     let finalAllow = 0;
 
-    // 3. المنطق المطلوب: لو البدلات الحقيقية أقل من الـ 30% القانونية
-    if (realAllowInput < maxLegalAllow) {
-        finalAllow = realAllowInput; // نعتمد البدلة الحقيقية الصغيره
-        finalInsBase = totalGrossInput - finalAllow; // الباقي كله يروح تأمينات
-    } else {
-        // لو البدلات الحقيقية أكبر أو تساوي الـ 30%، نلتزم بحد الـ 30% فقط
+    // 2. تطبيق منطقك (المقارنة):
+    if (realAllowInput > maxLegalAllow) {
+        // لو البدلات المدخلة أكثر من 30%، نثبتها عند الـ 30% (الحد الأقصى)
         finalAllow = maxLegalAllow;
         finalInsBase = theoreticalInsBase;
+    } else {
+        // لو البدلات أقل من أو تساوي 30%، نعتمدها كما هي
+        finalAllow = realAllowInput;
+        finalInsBase = totalGrossInput - finalAllow;
     }
 
-    // 4. تطبيق حدود التأمينات (2700 : 16700)
+    // 3. تطبيق حدود التأمينات 2026
     if(finalInsBase < 2700) finalInsBase = 2700;
     if(finalInsBase > 16700) finalInsBase = 16700;
 
+    // 4. الحسابات الضريبية
     const insVal = finalInsBase * 0.11;
     const yearlyIncome = (totalGrossInput - insVal) * 12;
     const exemption = document.getElementById('specialNeeds').checked ? 30000 : 20000;
@@ -104,7 +104,7 @@ function calcTax(){
     document.getElementById('outEx').textContent = r.exemption;
     document.getElementById('outMonth').textContent = r.monthlyTax.toFixed(2);
     document.getElementById('outNet').textContent = r.net.toFixed(2);
-    document.getElementById('details').textContent = 'تم الحساب (البدلات بحد أقصى 30% من التأميني المستنتج)';
+    document.getElementById('details').textContent = 'تم الحساب (البدلات لا تتعدى 30% من التأميني)';
 }
 
 function calcGrossFromNet(){
