@@ -7,8 +7,7 @@
 <style>
 body{font-family:Arial;background:linear-gradient(135deg,#eaf2ff,#f8fbff);padding:30px;color:#123}
 .box{max-width:950px;margin:auto;background:#fff;padding:25px;border-radius:20px;box-shadow:0 15px 35px rgba(0,64,160,.15)}
-.brand{text-align:center;margin-bottom:18px}
-.sub{color:#0b4fb3;font-weight:bold;margin-top:6px;font-size: 1.2em;}
+.brand{text-align:center;margin-bottom:18px}.sub{color:#0b4fb3;font-weight:bold;margin-top:6px;font-size: 1.2em;}
 .input-row { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; margin-bottom: 15px; gap: 10px; }
 .or-text { font-weight: bold; color: #0b4fb3; font-size: 1.1em; }
 input,button{padding:12px; border:1px solid #c9d8f0; border-radius:10px}
@@ -29,13 +28,12 @@ th{background:#0b4fb3;color:#fff}
 <div class="brand"><div class="sub">حاسبة ضريبة كسب العمل</div></div>
 
 <div class="input-row">
-    <input id="salary" type="number" placeholder="أدخل الراتب الشهري">
+    <input id="salary" type="number" placeholder="أدخل إجمالي الراتب بالبدلات">
     <span class="or-text">أو</span>
     <input id="netInput" type="number" placeholder="أدخل الصافي المطلوب">
 </div>
 
 <div class="input-row">
-    <input id="allowances" type="number" placeholder="أدخل البدلات (إن وجدت)">
     <label class="special-label"><input id="specialNeeds" type="checkbox"> ضريبة ذوي الهمم</label>
 </div>
 
@@ -45,7 +43,7 @@ th{background:#0b4fb3;color:#fff}
 </div>
 
 <table>
-<tr><th>إجمالي المستحق</th><th>البدلات المعتمدة (30%)</th><th>الأجر التأميني (100%)</th><th>تأمينات 11%</th><th>الإعفاء الشخصي</th><th>الضريبة الشهرية</th><th>الصافي الشهري</th></tr>
+<tr><th>إجمالي المستحق</th><th>البدلات المعتمدة</th><th>الأجر التأميني</th><th>تأمينات 11%</th><th>الإعفاء الشخصي</th><th>الضريبة الشهرية</th><th>الصافي الشهري</th></tr>
 <tr><td id="outSalary">-</td><td id="outAllow">-</td><td id="outInsBase">-</td><td id="outInsVal">-</td><td id="outEx">-</td><td id="outMonth">-</td><td id="outNet">-</td></tr>
 </table>
 <p id="details"></p>
@@ -55,25 +53,25 @@ th{background:#0b4fb3;color:#fff}
 <script>
 function tax(i){if(i<=40000)return 0; if(i<=55000)return (i-40000)*0.10; if(i<=70000)return (i-55000)*0.15+1500; if(i<=200000)return (i-70000)*0.20+3750; if(i<=400000)return (i-200000)*0.225+29750; if(i<=600000)return (i-400000)*0.25+74750; if(i<=1200000){let extra=0; if(i>=900001)extra=15250; else if(i>=800001)extra=10250; else if(i>=700001)extra=6750; else if(i>=600001)extra=4000; return (i-400000)*0.25+74750+extra;} return ((i-1200000)*0.275)+300000;}
 
-function calcValues(inputVal){
-    const inputAllow = Number(document.getElementById('allowances').value || 0);
-    // إجمالي الراتب هو مجموع الخانتين (الأساسي + البدلات)
-    const totalGross = inputVal + inputAllow;
-    
-    // الأجر التأميني = الإجمالي / 1.30
+function calcValues(totalGross){
+    // المعادلة الأساسية: الأجر التأميني هو الإجمالي مقسوماً على 1.30
     let insBase = totalGross / 1.30;
     
-    // حدود التأمينات 2026
+    // تطبيق حدود التأمينات لسنة 2026
     if(insBase < 2700) insBase = 2700;
     if(insBase > 16700) insBase = 16700;
 
-    // البدلات المعتمدة هي الفرق
+    // البدلات هي الفرق بين إجمالي الراتب والأجر التأميني
     const finalAllow = totalGross - insBase;
 
+    // حصة الموظف 11% من الأجر التأميني المستنتج
     const insVal = insBase * 0.11;
+
+    // حساب الوعاء الضريبي
     const yearlyIncome = (totalGross - insVal) * 12;
     const exemption = document.getElementById('specialNeeds').checked ? 30000 : 20000;
     const taxable = Math.max(0, yearlyIncome - exemption);
+    
     const yearlyTax = tax(taxable);
     const monthlyTax = yearlyTax / 12;
     const net = totalGross - insVal - monthlyTax;
@@ -83,7 +81,9 @@ function calcValues(inputVal){
 
 function calcTax(){
     const salary = Number(document.getElementById('salary').value || 0);
+    if(salary <= 0) return;
     const r = calcValues(salary);
+    
     document.getElementById('outSalary').textContent = r.totalGross.toFixed(2);
     document.getElementById('outAllow').textContent = r.finalAllow.toFixed(2);
     document.getElementById('outInsBase').textContent = r.insBase.toFixed(2);
@@ -91,7 +91,7 @@ function calcTax(){
     document.getElementById('outEx').textContent = r.exemption;
     document.getElementById('outMonth').textContent = r.monthlyTax.toFixed(2);
     document.getElementById('outNet').textContent = r.net.toFixed(2);
-    document.getElementById('details').textContent = 'تم الحساب بمعادلة (إجمالي المستحق ÷ 1.30)';
+    document.getElementById('details').textContent = 'تم الحساب بنجاح: (الأجر التأميني = الإجمالي ÷ 1.30)';
 }
 
 function calcGrossFromNet(){
